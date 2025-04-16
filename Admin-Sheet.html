@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <!-- Escalado adecuado en móviles y tablets -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Panel Admin - Restaurante</title>
+  <style>
+    :root {
+      --primary-color: #e74c3c;
+      --secondary-color: #f39c12;
+      --dark-color: #2c3e50;
+      --light-color: #ecf0f1;
+      --bg-color: #f5f5f5;
+      --text-color: #333;
+      --shadow-light: 0 2px 4px rgba(0,0,0,0.1);
+      --shadow-medium: 0 4px 12px rgba(0,0,0,0.15);
+      --border-radius: 10px;
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      overflow-x: hidden;
+    }
+    
+    header {
+      height: 70px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1rem;
+      background: #fff;
+      box-shadow: var(--shadow-light);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    
+    header .header-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: var(--dark-color);
+    }
+    
+    /* El header ahora muestra solo el botón de "Gestionar" */
+    #toggleAdmin {
+      background: var(--primary-color);
+      border: none;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    #toggleAdmin:hover { opacity: 0.9; }
+    
+    .loader {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 5px solid var(--primary-color);
+      animation: spin 1s linear infinite;
+      z-index: 1000;
+    }
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+    
+    /* Panel administrativo */
+    #adminPanel {
+      position: fixed;
+      top: 70px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 70px);
+      background: rgba(0,0,0,0.5);
+      z-index: 30;
+      display: none;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    #adminPanel .panel-container {
+      background: #fff;
+      border-radius: var(--border-radius);
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    /* Botones que aparecen dentro del panel, justo arriba de la tabla */
+    .panel-container .action-btn {
+      background: var(--primary-color);
+      border: none;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-right: 5px;
+    }
+    .panel-container .action-btn:hover { opacity: 0.9; }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    .action-buttons button {
+      margin: 0 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      transition: var(--transition);
+    }
+    
+    /* Estilos genéricos para modales (pantalla completa o casi completa) */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.7);
+      z-index: 40;
+      overflow-y: auto;
+      padding: 0;
+    }
+    .modal .modal-content {
+      background: #fff;
+      width: 100%;
+      max-width: 600px;
+      height: 100%;
+      border-radius: 0;
+      overflow-y: auto;
+      padding: 20px;
+      position: relative;
+      animation: slideIn 0.3s ease-out;
+      margin: 0 auto;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px;
+      font-size: 0.9rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .btn-group {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .btn-group button {
+      padding: 10px 15px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-group .secondary { background: #ccc; color: var(--text-color); }
+    .btn-group .primary { background: var(--primary-color); color: white; }
+    
+    /* Constructor de menú (se utiliza en el modal de NUEVO MENÚ) */
+    .menu-constructor {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .menu-constructor h4 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: var(--dark-color);
+    }
+    /* Campo para el Título del Menú en el constructor */
+    .menu-constructor .menu-main-title {
+      margin-bottom: 10px;
+    }
+    .menu-constructor .menu-main-title input {
+      padding: 8px;
+      font-size: 0.9rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+    }
+    .menu-section {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      background: #fff;
+    }
+    .menu-section input.section-title {
+      width: 80%;
+      padding: 6px;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+    }
+    .menu-section button {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      border: none;
+      border-radius: 4px;
+      background: var(--secondary-color);
+      color: white;
+      cursor: pointer;
+      margin-left: 5px;
+      transition: var(--transition);
+    }
+    .menu-section .options-container {
+      margin-top: 10px;
+    }
+    .menu-section .options-container div {
+      display: flex;
+      margin-bottom: 5px;
+    }
+    .menu-section .option-input {
+      flex: 1;
+      padding: 6px;
+      font-size: 0.9rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .menu-section .options-container button {
+      padding: 5px 8px;
+      background: var(--primary-color);
+      border: none;
+      color: white;
+      border-radius: 4px;
+      margin-left: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: var(--transition);
+    }
+    
+    /* Responsive: ajustes para móviles y tablets */
+    @media (max-width: 600px) {
+      header { padding: 0 0.5rem; height: 60px; }
+      header .header-title { font-size: 1rem; }
+      #toggleAdmin { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+      #adminPanel { padding: 10px; }
+      #adminPanel .panel-container { padding: 15px; margin: 0 5px; }
+      table, th, td { font-size: 0.8rem; }
+      .modal .modal-content { width: 100%; max-width: 100%; height: 100%; padding: 15px; }
+      .form-group input, .form-group textarea { font-size: 0.85rem; }
+      .btn-group button { padding: 8px 12px; font-size: 0.85rem; }
+      .menu-constructor, .menu-section input.section-title, .menu-section .option-input { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="loader" id="loader"></div>
+  
+  <header>
+    <div class="header-title">Panel Administrativo</div>
+    <!-- Solo aparece el botón "Gestionar" en el navbar -->
+    <button id="toggleAdmin">Gestionar</button>
+  </header>
+  
+  <!-- Panel de administración (Productos) -->
+  <div id="adminPanel">
+    <div class="panel-container">
+      <h2>Gestión de Productos</h2>
+      <!-- Aquí se agregan los botones "Nuevo Producto" y "Nuevo Menú" -->
+      <div style="margin-bottom:15px;">
+        <button class="action-btn" id="newProductBtn">Nuevo Producto</button>
+        <button class="action-btn" id="newMenuBtn">Nuevo Menú</button>
+      </div>
+      <!-- Se listarán los productos en esta tabla -->
+      <div id="adminTableContainer"></div>
+    </div>
+  </div>
+  
+  <!-- Modal para Nuevo/Editar Producto -->
+  <div class="modal" id="adminModal">
+    <div class="modal-content">
+      <h3 id="adminModalTitle">Nuevo Producto</h3>
+      <input type="hidden" id="adminProductId">
+      <div class="form-group">
+        <label>Nombre del Producto:</label>
+        <input type="text" id="adminProductName" required placeholder="Ej: Producto Genérico">
+      </div>
+      <div class="form-group">
+        <label>Descripción:</label>
+        <textarea id="adminProductDescription" placeholder="Descripción del producto..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Precio (€):</label>
+        <input type="number" id="adminProductPrice" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label>Imagen:</label>
+        <input type="file" id="adminProductImage" accept="image/*">
+      </div>
+      <div class="form-group">
+        <label>Categoría:</label>
+        <input type="text" id="adminProductCategory" required placeholder="Ej: Bebidas, Snacks">
+      </div>
+      <div class="form-group">
+        <label>Subcategoría:</label>
+        <input type="text" id="adminProductSubcategory" placeholder="Ej: Fríos, Calientes">
+      </div>
+      <div class="btn-group">
+        <button class="secondary" id="cancelAdminModalBtn">Cancelar</button>
+        <button class="primary" id="saveAdminProductBtn">Guardar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal para Nuevo Menú -->
+  <div class="modal" id="menuModal">
+    <div class="modal-content">
+      <h3 id="menuModalTitle">Nuevo Menú</h3>
+      <input type="hidden" id="adminMenuId">
+      
+      <!-- Campos básicos para el menú -->
+      <div class="form-group">
+        <label>Título del Menú:</label>
+        <input type="text" id="adminMenuTitleField" required placeholder="Ej: Menú Festivo">
+      </div>
+      <div class="form-group">
+        <label>Descripción:</label>
+        <textarea id="adminMenuDescription" placeholder="Descripción del menú..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Precio (€):</label>
+        <input type="number" id="adminMenuPrice" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label>Imagen:</label>
+        <input type="file" id="adminMenuImage" accept="image/*">
+      </div>
+      
+      <!-- Constructor de menú -->
+      <div class="menu-constructor">
+        <h4>Constructor del Menú</h4>
+        <!-- Contenedor para las secciones dinámicas -->
+        <div id="menuModalSectionsContainer"></div>
+        <!-- Botón para agregar una sección -->
+        <button type="button" id="addSectionMenuBtn">Agregar Sección</button>
+        <!-- Campo oculto para almacenar el JSON generado del menú -->
+        <input type="hidden" id="menuOptionsMenu">
+      </div>
+      
+      <div class="btn-group">
+        <button class="secondary" id="cancelMenuModalBtn">Cancelar</button>
+        <button class="primary" id="saveMenuBtn">Guardar</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // VARIABLES GLOBALES Y CONSTANTES
+    let products = [];
+    const GOOGLE_SCRIPT_URL = 'TU_URL_SCRIPT_GOOGLE';   // Reemplaza con tu URL de Google Apps Script
+    const IMGUR_CLIENT_ID = 'TU_CLIENT_ID_IMGUR';        // Reemplaza con tu Client ID de Imgur
+    
+    // FUNCIONES COMUNES
+    function showLoader() {
+      document.getElementById('loader').style.display = 'block';
+    }
+    function hideLoader() {
+      document.getElementById('loader').style.display = 'none';
+    }
+    
+    // CARGA DE PRODUCTOS (para el panel de productos)
+    async function loadProducts() {
+      showLoader();
+      try {
+        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=get`);
+        if (!response.ok) throw new Error('Error en la respuesta');
+        products = await response.json();
+        renderProducts();
+      } catch (error) {
+        alert('Error cargando productos: ' + error.message);
+      }
+      hideLoader();
+    }
+    
+    function renderProducts() {
+      const container = document.getElementById('adminTableContainer');
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Precio</th>
+              <th>Categoría</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      products.forEach((product, index) => {
+        html += `
+          <tr>
+            <td>${product.name}</td>
+            <td>${product.price} €</td>
+            <td>${product.category}</td>
+            <td class="action-buttons">
+              <button onclick="editProduct(${index})">Editar</button>
+              <button onclick="deleteProduct(${index})">Eliminar</button>
+            </td>
+          </tr>`;
+      });
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+    
+    // FUNCIONES PARA MODAL DE PRODUCTOS
+    function editProduct(index) {
+      const product = products[index];
+      document.getElementById('adminProductId').value = product.id;
+      document.getElementById('adminProductName').value = product.name;
+      document.getElementById('adminProductDescription').value = product.description;
+      document.getElementById('adminProductPrice').value = product.price;
+      document.getElementById('adminProductCategory').value = product.category;
+      document.getElementById('adminProductSubcategory').value = product.subcategory || "";
+      document.getElementById('adminModalTitle').textContent = 'Editar Producto';
+      document.getElementById('adminModal').style.display = 'flex';
+    }
+    
+    async function deleteProduct(index) {
+      if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
+      showLoader();
+      try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id: products[index].id })
+        });
+        if (!response.ok) throw new Error('Error en la respuesta');
+        await loadProducts();
+      } catch (error) {
+        alert('Error eliminando producto: ' + error.message);
+      }
+      hideLoader();
+    }
+    
+    document.getElementById('newProductBtn').addEventListener('click', () => {
+      document.getElementById('adminModalTitle').textContent = 'Nuevo Producto';
+      document.getElementById('adminProductId').value = '';
+      document.getElementById('adminProductName').value = '';
+      document.getElementById('adminProductDescription').value = '';
+      document.getElementById('adminProductPrice').value = '';
+      document.getElementById('adminProductCategory').value = '';
+      document.getElementById('adminProductSubcategory').value = '';
+      document.getElementById('adminProductImage').value = '';
+      document.getElementById('adminModal').style.display = 'flex';
+    });
+    
+    document.getElementById('cancelAdminModalBtn').addEventListener('click', () => {
+      document.getElementById('adminModal').style.display = 'none';
+    });
+    
+    document.getElementById('saveAdminProductBtn').addEventListener('click', async () => {
+      const required = ['adminProductName', 'adminProductPrice', 'adminProductCategory'];
+      let valid = true;
+      required.forEach(id => {
+        const field = document.getElementById(id);
+        if (!field.value.trim()) {
+          field.style.borderColor = '#e74c3c';
+          valid = false;
+        } else {
+          field.style.borderColor = '';
+        }
+      });
+      if (!valid) {
+        alert('Complete todos los campos requeridos');
+        return;
+      }
+      
+      const id = document.getElementById('adminProductId').value;
+      const name = document.getElementById('adminProductName').value.trim();
+      const description = document.getElementById('adminProductDescription').value.trim();
+      const price = parseFloat(document.getElementById('adminProductPrice').value);
+      const category = document.getElementById('adminProductCategory').value.trim();
+      const subcategory = document.getElementById('adminProductSubcategory').value.trim();
+      
+      const fileInput = document.getElementById('adminProductImage');
+      let imageUrl = "";
+      const isEdit = !!id;
+      if (fileInput.files[0]) {
+        try {
+          const formData = new FormData();
+          formData.append('image', fileInput.files[0]);
+          const response = await fetch('https://api.imgur.com/3/image/', {
+            method: 'POST',
+            headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` },
+            body: formData
+          });
+          const data = await response.json();
+          if (!data.success) throw new Error(data.data.error);
+          imageUrl = data.data.link;
+        } catch (error) {
+          alert('Error subiendo imagen: ' + error.message);
+          return;
+        }
+      } else if (isEdit) {
+        const existing = products.find(p => p.id === id);
+        imageUrl = existing?.image || "";
+      }
+      
+      const productData = {
+        id: id || Date.now().toString(),
+        name,
+        description,
+        price,
+        category,
+        subcategory,
+        image: imageUrl
+      };
+      
+      showLoader();
+      try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: isEdit ? 'update' : 'add',
+            product: productData
+          })
+        });
+        if (!response.ok) throw new Error('Error en la respuesta');
+        await loadProducts();
+        document.getElementById('adminModal').style.display = 'none';
+      } catch (error) {
+        alert('Error guardando producto: ' + error.message);
+      }
+      hideLoader();
+    });
+    
+    // FUNCIONES PARA MODAL DE MENÚ (NUEVO MENÚ)
+    function addMenuSection(defaultTitle = "", defaultOptions = []) {
+      const container = document.getElementById('menuModalSectionsContainer');
+      const sectionDiv = document.createElement('div');
+      sectionDiv.className = 'menu-section';
+      
+      const sectionTitleInput = document.createElement('input');
+      sectionTitleInput.type = 'text';
+      sectionTitleInput.placeholder = 'Nombre de la sección (p.ej., Primer Plato)';
+      sectionTitleInput.className = 'section-title';
+      sectionTitleInput.value = defaultTitle;
+      sectionTitleInput.addEventListener('input', updateMenuJSONMenu);
+      
+      const removeSectionBtn = document.createElement('button');
+      removeSectionBtn.type = 'button';
+      removeSectionBtn.textContent = 'Eliminar Sección';
+      removeSectionBtn.addEventListener('click', () => {
+        sectionDiv.remove();
+        updateMenuJSONMenu();
+      });
+      
+      const titleContainer = document.createElement('div');
+      titleContainer.appendChild(sectionTitleInput);
+      titleContainer.appendChild(removeSectionBtn);
+      
+      const optionsContainer = document.createElement('div');
+      optionsContainer.className = 'options-container';
+      
+      const addOptionBtn = document.createElement('button');
+      addOptionBtn.type = 'button';
+      addOptionBtn.textContent = 'Agregar Opción';
+      addOptionBtn.addEventListener('click', () => {
+        addMenuOptionMenu(optionsContainer);
+      });
+      
+      sectionDiv.appendChild(titleContainer);
+      sectionDiv.appendChild(optionsContainer);
+      sectionDiv.appendChild(addOptionBtn);
+      container.appendChild(sectionDiv);
+      
+      // Si se pasan opciones por defecto, agrégalas
+      if (defaultOptions.length > 0) {
+        defaultOptions.forEach(opt => {
+          addMenuOptionMenu(optionsContainer, opt);
+        });
+      }
+      updateMenuJSONMenu();
+    }
+    
+    function addMenuOptionMenu(optionsContainer, defaultValue = "") {
+      const optionDiv = document.createElement('div');
+      optionDiv.style.display = 'flex';
+      optionDiv.style.marginBottom = '5px';
+      
+      const optionInput = document.createElement('input');
+      optionInput.type = 'text';
+      optionInput.placeholder = 'Nombre de la opción';
+      optionInput.className = 'option-input';
+      optionInput.value = defaultValue;
+      optionInput.addEventListener('input', updateMenuJSONMenu);
+      
+      const removeOptionBtn = document.createElement('button');
+      removeOptionBtn.type = 'button';
+      removeOptionBtn.textContent = 'Eliminar';
+      removeOptionBtn.addEventListener('click', () => {
+        optionDiv.remove();
+        updateMenuJSONMenu();
+      });
+      
+      optionDiv.appendChild(optionInput);
+      optionDiv.appendChild(removeOptionBtn);
+      optionsContainer.appendChild(optionDiv);
+    }
+    
+    function updateMenuJSONMenu() {
+      const menuData = {};
+      const sections = document.querySelectorAll('#menuModalSectionsContainer .menu-section');
+      sections.forEach(section => {
+        const sectionTitle = section.querySelector('.section-title').value.trim();
+        if (sectionTitle === '') return;
+        const key = sectionTitle.replace(/\s+/g, '');
+        const optionsInputs = section.querySelectorAll('.option-input');
+        const options = [];
+        optionsInputs.forEach(input => {
+          const value = input.value.trim();
+          if (value !== '') options.push(value);
+        });
+        if (options.length > 0) menuData[key] = options;
+      });
+      document.getElementById('menuOptionsMenu').value = JSON.stringify(menuData);
+    }
+    
+    document.getElementById('newMenuBtn').addEventListener('click', () => {
+      document.getElementById('menuModalTitle').textContent = 'Nuevo Menú';
+      document.getElementById('adminMenuId').value = '';
+      document.getElementById('adminMenuTitleField').value = '';
+      document.getElementById('adminMenuDescription').value = '';
+      document.getElementById('adminMenuPrice').value = '';
+      document.getElementById('adminMenuImage').value = '';
+      document.getElementById('menuModalSectionsContainer').innerHTML = '';
+      document.getElementById('menuOptionsMenu').value = '';
+      document.getElementById('menuModal').style.display = 'flex';
+    });
+    
+    document.getElementById('cancelMenuModalBtn').addEventListener('click', () => {
+      document.getElementById('menuModal').style.display = 'none';
+    });
+    
+    document.getElementById('addSectionMenuBtn').addEventListener('click', () => {
+      addMenuSection();
+    });
+    
+    document.getElementById('saveMenuBtn').addEventListener('click', async () => {
+      // Validar campos mínimos para menú (Título y Precio)
+      const titleField = document.getElementById('adminMenuTitleField');
+      const priceField = document.getElementById('adminMenuPrice');
+      if (!titleField.value.trim() || !priceField.value.trim()) {
+        alert('Complete los campos obligatorios (Título y Precio)');
+        return;
+      }
+      
+      updateMenuJSONMenu();
+      const menuOptions = document.getElementById('menuOptionsMenu').value;
+      
+      const id = document.getElementById('adminMenuId').value;
+      const menuTitle = titleField.value.trim();
+      const description = document.getElementById('adminMenuDescription').value.trim();
+      const price = parseFloat(priceField.value);
+      
+      const fileInput = document.getElementById('adminMenuImage');
+      let imageUrl = "";
+      const isEdit = !!id;
+      if (fileInput.files[0]) {
+        try {
+          const formData = new FormData();
+          formData.append('image', fileInput.files[0]);
+          const response = await fetch('https://api.imgur.com/3/image/', {
+            method: 'POST',
+            headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` },
+            body: formData
+          });
+          const data = await response.json();
+          if (!data.success) throw new Error(data.data.error);
+          imageUrl = data.data.link;
+        } catch (error) {
+          alert('Error subiendo imagen: ' + error.message);
+          return;
+        }
+      }
+      
+      const menuData = {
+        id: id || Date.now().toString(),
+        title: menuTitle,
+        description,
+        price,
+        image: imageUrl,
+        menuOptions
+      };
+      
+      showLoader();
+      try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: isEdit ? 'updateMenu' : 'addMenu',
+            menu: menuData
+          })
+        });
+        if (!response.ok) throw new Error('Error en la respuesta');
+        document.getElementById('menuModal').style.display = 'none';
+      } catch (error) {
+        alert('Error guardando menú: ' + error.message);
+      }
+      hideLoader();
+    });
+    
+    // Alternar panel de administración
+    document.getElementById('toggleAdmin').addEventListener('click', () => {
+      const panel = document.getElementById('adminPanel');
+      panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+      if (panel.style.display === 'block') loadProducts();
+    });
+  </script>
+</body>
+</html>
