@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MESA 1</title>
+  <style>
+    /* Aquí va todo tu CSS original, copiado exactamente desde tu archivo */
+    body { background: #f5f5f5; margin: 0; font-family: sans-serif; }
+    header { height: 70px; display: flex; justify-content: space-between; align-items: center; padding: 0 1rem; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header-title { font-size: 1.2rem; font-weight: bold; }
+    .cart-btn { font-size: 1.8rem; background: none; border: none; cursor: pointer; position: relative; }
+    .cart-count { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; }
+    main { padding: 1rem; }
+    .product-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+    .product-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05); cursor: pointer; transition: 0.3s; }
+    .product-card:hover { transform: scale(1.02); }
+    .product-card img { width: 100%; }
+    .card-body { padding: 1rem; }
+    .card-body h3 { margin: 0; font-size: 1rem; }
+    .card-body p { margin: 0.5rem 0; font-size: 0.85rem; }
+    .price { font-weight: bold; color: #e74c3c; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-title"><strong>Nombre Bar-Restaurante</strong></div>
+    <button class="cart-btn" id="openCart">
+      <span>🛒</span>
+      <span class="cart-count" id="cartCount" style="display:none;">0</span>
+    </button>
+  </header>
+  <main>
+    <div class="product-list" id="productList">
+      <!-- Aquí se generan los productos desde JS -->
+    </div>
+  </main>
+  <div id="overlay" class="overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:100;"></div>  <script>
+    // Código JavaScript esencial para cargar productos y funcionalidad de carrito
+    let products = [
+      { id: "1", name: "Producto 1", description: "Descripción 1", price: 10, image: "https://via.placeholder.com/300" },
+      { id: "2", name: "Producto 2", description: "Descripción 2", price: 20, image: "https://via.placeholder.com/300" }
+    ];
+    let cart = [];
+
+    function renderProducts() {
+      const productList = document.getElementById('productList');
+      productList.innerHTML = "";
+      products.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.innerHTML = `
+          <img src="${product.image}" alt="${product.name}">
+          <div class="card-body">
+            <h3>${product.name}</h3>
+            <p>${product.description}</p>
+            <p class="price">${product.price.toFixed(2)} €</p>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          cart.push(product);
+          document.getElementById('cartCount').style.display = 'block';
+          document.getElementById('cartCount').textContent = cart.length;
+        });
+        productList.appendChild(card);
+      });
+    }
+
+    renderProducts();
+  </script>  <script type="module">
+    import { guardarPedido } from './APP(mejorado)(cambiarnombre).js';
+
+    async function realizarPedido() {
+      const mesa = document.title || "Mesa sin nombre";
+      const pedido = window.cart || [];
+      const precioTotal = pedido.reduce((sum, item) => sum + (item.price || 0), 0);
+
+      const orderData = {
+        mesa,
+        pedido,
+        precio: precioTotal
+      };
+
+      try {
+        await guardarPedido(orderData);
+        console.log("Pedido guardado correctamente en Firebase.");
+        return true;
+      } catch (error) {
+        console.error("Error al guardar el pedido:", error);
+        alert("Error al guardar el pedido: " + error.message);
+        throw error;
+      }
+    }
+
+    window.realizarPedido = realizarPedido;
+  </script></body>
+</html>
