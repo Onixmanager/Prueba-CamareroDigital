@@ -296,32 +296,28 @@
   
   <header>
     <div class="header-title">Panel Administrativo</div>
-    <!-- Solo aparece el botón "Gestionar" en el navbar -->
     <button id="toggleAdmin">Gestionar</button>
   </header>
   
-  <!-- Panel de administración (Productos) -->
   <div id="adminPanel">
     <div class="panel-container">
       <h2>Gestión de Productos</h2>
-      <!-- Aquí se agregan los botones "Nuevo Producto" y "Nuevo Menú" -->
       <div style="margin-bottom:15px;">
         <button class="action-btn" id="newProductBtn">Nuevo Producto</button>
         <button class="action-btn" id="newMenuBtn">Nuevo Menú</button>
       </div>
-      <!-- Se listarán los productos en esta tabla -->
       <div id="adminTableContainer"></div>
     </div>
   </div>
   
-  <!-- Modal para Nuevo/Editar Producto -->
+  <!-- Modal Productos -->
   <div class="modal" id="adminModal">
     <div class="modal-content">
       <h3 id="adminModalTitle">Nuevo Producto</h3>
       <input type="hidden" id="adminProductId">
       <div class="form-group">
         <label>Nombre del Producto:</label>
-        <input type="text" id="adminProductName" required placeholder="Ej: Producto Genérico">
+        <input type="text" id="adminProductName" placeholder="Ej: Producto Genérico">
       </div>
       <div class="form-group">
         <label>Descripción:</label>
@@ -329,7 +325,7 @@
       </div>
       <div class="form-group">
         <label>Precio (€):</label>
-        <input type="number" id="adminProductPrice" step="0.01" required>
+        <input type="number" id="adminProductPrice" step="0.01">
       </div>
       <div class="form-group">
         <label>Imagen:</label>
@@ -337,7 +333,7 @@
       </div>
       <div class="form-group">
         <label>Categoría:</label>
-        <input type="text" id="adminProductCategory" required placeholder="Ej: Bebidas, Snacks">
+        <input type="text" id="adminProductCategory" placeholder="Ej: Bebidas, Snacks">
       </div>
       <div class="form-group">
         <label>Subcategoría:</label>
@@ -350,16 +346,14 @@
     </div>
   </div>
   
-  <!-- Modal para Nuevo Menú -->
+  <!-- Modal Menús -->
   <div class="modal" id="menuModal">
     <div class="modal-content">
       <h3 id="menuModalTitle">Nuevo Menú</h3>
       <input type="hidden" id="adminMenuId">
-      
-      <!-- Campos básicos para el menú -->
       <div class="form-group">
         <label>Título del Menú:</label>
-        <input type="text" id="adminMenuTitleField" required placeholder="Ej: Menú Festivo">
+        <input type="text" id="adminMenuTitleField" placeholder="Ej: Menú Festivo">
       </div>
       <div class="form-group">
         <label>Descripción:</label>
@@ -367,24 +361,18 @@
       </div>
       <div class="form-group">
         <label>Precio (€):</label>
-        <input type="number" id="adminMenuPrice" step="0.01" required>
+        <input type="number" id="adminMenuPrice" step="0.01">
       </div>
       <div class="form-group">
         <label>Imagen:</label>
         <input type="file" id="adminMenuImage" accept="image/*">
       </div>
-      
-      <!-- Constructor de menú -->
       <div class="menu-constructor">
         <h4>Constructor del Menú</h4>
-        <!-- Contenedor para las secciones dinámicas -->
         <div id="menuModalSectionsContainer"></div>
-        <!-- Botón para agregar una sección -->
         <button type="button" id="addSectionMenuBtn">Agregar Sección</button>
-        <!-- Campo oculto para almacenar el JSON generado del menú -->
         <input type="hidden" id="menuOptionsMenu">
       </div>
-      
       <div class="btn-group">
         <button class="secondary" id="cancelMenuModalBtn">Cancelar</button>
         <button class="primary" id="saveMenuBtn">Guardar</button>
@@ -393,368 +381,279 @@
   </div>
   
   <script>
-    // VARIABLES GLOBALES Y CONSTANTES
+    // ————————————————
+    // Constantes globales
+    // ————————————————
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/‹TU_ID›/exec';  // <- Pon aquí tu URL
+    const IMGUR_CLIENT_ID   = '‹TU_CLIENT_ID_IMGUR›';
     let products = [];
-    const GOOGLE_SCRIPT_URL = 'TU_URL_SCRIPT_GOOGLE';   // Reemplaza con tu URL de Google Apps Script
-    const IMGUR_CLIENT_ID = 'TU_CLIENT_ID_IMGUR';        // Reemplaza con tu Client ID de Imgur
     
-    // FUNCIONES COMUNES
-    function showLoader() {
-      document.getElementById('loader').style.display = 'block';
-    }
-    function hideLoader() {
-      document.getElementById('loader').style.display = 'none';
-    }
+    // ————————————————
+    // Loader
+    // ————————————————
+    function showLoader(){ document.getElementById('loader').style.display='block'; }
+    function hideLoader(){ document.getElementById('loader').style.display='none'; }
     
-    // CARGA DE PRODUCTOS (para el panel de productos)
-    async function loadProducts() {
+    // ————————————————
+    // Carga y renderizado de productos
+    // ————————————————
+    async function loadProducts(){
       showLoader();
       try {
-        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=get`);
-        if (!response.ok) throw new Error('Error en la respuesta');
-        products = await response.json();
+        const res = await fetch(GOOGLE_SCRIPT_URL);
+        if(!res.ok) throw new Error(res.statusText);
+        products = await res.json();
         renderProducts();
-      } catch (error) {
-        alert('Error cargando productos: ' + error.message);
+      } catch(err){
+        alert('Error cargando productos: '+err);
       }
       hideLoader();
     }
     
-    function renderProducts() {
-      const container = document.getElementById('adminTableContainer');
-      let html = `
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Precio</th>
-              <th>Categoría</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>`;
-      products.forEach((product, index) => {
-        html += `
-          <tr>
-            <td>${product.name}</td>
-            <td>${product.price} €</td>
-            <td>${product.category}</td>
-            <td class="action-buttons">
-              <button onclick="editProduct(${index})">Editar</button>
-              <button onclick="deleteProduct(${index})">Eliminar</button>
-            </td>
-          </tr>`;
+    function renderProducts(){
+      const c = document.getElementById('adminTableContainer');
+      let html = `<table>
+        <thead><tr>
+          <th>Nombre</th><th>Precio</th><th>Categoría</th><th>Acciones</th>
+        </tr></thead><tbody>`;
+      products.forEach((p,i)=>{
+        html += `<tr>
+          <td>${p.name}</td>
+          <td>${p.price} €</td>
+          <td>${p.category}</td>
+          <td class="action-buttons">
+            <button onclick="editProduct(${i})">Editar</button>
+            <button onclick="deleteProduct(${i})">Eliminar</button>
+          </td>
+        </tr>`;
       });
       html += `</tbody></table>`;
-      container.innerHTML = html;
+      c.innerHTML = html;
     }
     
-    // FUNCIONES PARA MODAL DE PRODUCTOS
-    function editProduct(index) {
-      const product = products[index];
-      document.getElementById('adminProductId').value = product.id;
-      document.getElementById('adminProductName').value = product.name;
-      document.getElementById('adminProductDescription').value = product.description;
-      document.getElementById('adminProductPrice').value = product.price;
-      document.getElementById('adminProductCategory').value = product.category;
-      document.getElementById('adminProductSubcategory').value = product.subcategory || "";
-      document.getElementById('adminModalTitle').textContent = 'Editar Producto';
-      document.getElementById('adminModal').style.display = 'flex';
+    // ————————————————
+    // CRUD Productos
+    // ————————————————
+    function editProduct(i){
+      const p = products[i];
+      document.getElementById('adminProductId').value          = p.id;
+      document.getElementById('adminProductName').value        = p.name;
+      document.getElementById('adminProductDescription').value = p.description;
+      document.getElementById('adminProductPrice').value       = p.price;
+      document.getElementById('adminProductCategory').value    = p.category;
+      document.getElementById('adminProductSubcategory').value = p.subcategory||'';
+      document.getElementById('adminModalTitle').textContent   = 'Editar Producto';
+      document.getElementById('adminModal').style.display      = 'flex';
     }
     
-    async function deleteProduct(index) {
-      if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
+    async function deleteProduct(i){
+      if(!confirm('¿Eliminar este producto?')) return;
       showLoader();
       try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
+        await fetch(GOOGLE_SCRIPT_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', id: products[index].id })
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'delete', id: products[i].id })
         });
-        if (!response.ok) throw new Error('Error en la respuesta');
         await loadProducts();
-      } catch (error) {
-        alert('Error eliminando producto: ' + error.message);
+      } catch(err){
+        alert('Error: '+err);
       }
       hideLoader();
     }
     
-    document.getElementById('newProductBtn').addEventListener('click', () => {
+    document.getElementById('newProductBtn').onclick = ()=>{
       document.getElementById('adminModalTitle').textContent = 'Nuevo Producto';
-      document.getElementById('adminProductId').value = '';
-      document.getElementById('adminProductName').value = '';
-      document.getElementById('adminProductDescription').value = '';
-      document.getElementById('adminProductPrice').value = '';
-      document.getElementById('adminProductCategory').value = '';
-      document.getElementById('adminProductSubcategory').value = '';
-      document.getElementById('adminProductImage').value = '';
-      document.getElementById('adminModal').style.display = 'flex';
-    });
-    
-    document.getElementById('cancelAdminModalBtn').addEventListener('click', () => {
-      document.getElementById('adminModal').style.display = 'none';
-    });
-    
-    document.getElementById('saveAdminProductBtn').addEventListener('click', async () => {
-      const required = ['adminProductName', 'adminProductPrice', 'adminProductCategory'];
-      let valid = true;
-      required.forEach(id => {
-        const field = document.getElementById(id);
-        if (!field.value.trim()) {
-          field.style.borderColor = '#e74c3c';
-          valid = false;
-        } else {
-          field.style.borderColor = '';
-        }
+      ['adminProductId','adminProductName','adminProductDescription','adminProductPrice','adminProductCategory','adminProductSubcategory'].forEach(id=>{
+        document.getElementById(id).value = '';
       });
-      if (!valid) {
-        alert('Complete todos los campos requeridos');
+      document.getElementById('adminProductImage').value='';
+      document.getElementById('adminModal').style.display='flex';
+    };
+    
+    document.getElementById('cancelAdminModalBtn').onclick = ()=>{
+      document.getElementById('adminModal').style.display='none';
+    };
+    
+    document.getElementById('saveAdminProductBtn').onclick = async ()=>{
+      // Validar mínimos
+      const nameF = document.getElementById('adminProductName');
+      const priceF= document.getElementById('adminProductPrice');
+      const catF  = document.getElementById('adminProductCategory');
+      if(!nameF.value||!priceF.value||!catF.value){
+        alert('Complete todos los campos obligatorios');
         return;
       }
       
-      const id = document.getElementById('adminProductId').value;
-      const name = document.getElementById('adminProductName').value.trim();
-      const description = document.getElementById('adminProductDescription').value.trim();
-      const price = parseFloat(document.getElementById('adminProductPrice').value);
-      const category = document.getElementById('adminProductCategory').value.trim();
-      const subcategory = document.getElementById('adminProductSubcategory').value.trim();
-      
-      const fileInput = document.getElementById('adminProductImage');
-      let imageUrl = "";
-      const isEdit = !!id;
-      if (fileInput.files[0]) {
-        try {
-          const formData = new FormData();
-          formData.append('image', fileInput.files[0]);
-          const response = await fetch('https://api.imgur.com/3/image/', {
-            method: 'POST',
-            headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` },
-            body: formData
-          });
-          const data = await response.json();
-          if (!data.success) throw new Error(data.data.error);
-          imageUrl = data.data.link;
-        } catch (error) {
-          alert('Error subiendo imagen: ' + error.message);
-          return;
-        }
-      } else if (isEdit) {
-        const existing = products.find(p => p.id === id);
-        imageUrl = existing?.image || "";
+      // Subir imagen si la hay
+      let imageUrl = '';
+      const file = document.getElementById('adminProductImage').files[0];
+      if(file){
+        const fd = new FormData(); fd.append('image',file);
+        const imgRes = await fetch('https://api.imgur.com/3/image/',{
+          method:'POST',
+          headers:{ Authorization:`Client-ID ${IMGUR_CLIENT_ID}` },
+          body:fd
+        });
+        const imgJson = await imgRes.json();
+        if(!imgJson.success) { alert('Error IMGUR'); return; }
+        imageUrl = imgJson.data.link;
       }
       
+      // Construir payload “plano”
+      const isEdit = !!document.getElementById('adminProductId').value;
       const productData = {
-        id: id || Date.now().toString(),
-        name,
-        description,
-        price,
-        category,
-        subcategory,
-        image: imageUrl
+        id: document.getElementById('adminProductId').value || Date.now().toString(),
+        name: nameF.value.trim(),
+        description: document.getElementById('adminProductDescription').value.trim(),
+        price: parseFloat(priceF.value),
+        image: imageUrl,
+        category: catF.value.trim(),
+        subcategory: document.getElementById('adminProductSubcategory').value.trim()
       };
+      const payload = Object.assign(
+        { action: isEdit ? 'update' : 'add' },
+        productData
+      );
       
       showLoader();
       try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
+        await fetch(GOOGLE_SCRIPT_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: isEdit ? 'update' : 'add',
-            product: productData
-          })
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error('Error en la respuesta');
+        document.getElementById('adminModal').style.display='none';
         await loadProducts();
-        document.getElementById('adminModal').style.display = 'none';
-      } catch (error) {
-        alert('Error guardando producto: ' + error.message);
+      } catch(err){
+        alert('Error guardando: '+err);
       }
       hideLoader();
-    });
+    };
     
-    // FUNCIONES PARA MODAL DE MENÚ (NUEVO MENÚ)
-    function addMenuSection(defaultTitle = "", defaultOptions = []) {
+    // ————————————————
+    // CRUD Menús
+    // ————————————————
+    function addMenuSection(defaultTitle='', defaultOptions=[]){
       const container = document.getElementById('menuModalSectionsContainer');
       const sectionDiv = document.createElement('div');
       sectionDiv.className = 'menu-section';
-      
-      const sectionTitleInput = document.createElement('input');
-      sectionTitleInput.type = 'text';
-      sectionTitleInput.placeholder = 'Nombre de la sección (p.ej., Primer Plato)';
-      sectionTitleInput.className = 'section-title';
-      sectionTitleInput.value = defaultTitle;
-      sectionTitleInput.addEventListener('input', updateMenuJSONMenu);
-      
-      const removeSectionBtn = document.createElement('button');
-      removeSectionBtn.type = 'button';
-      removeSectionBtn.textContent = 'Eliminar Sección';
-      removeSectionBtn.addEventListener('click', () => {
+      const titleIn = document.createElement('input');
+      titleIn.type='text'; titleIn.placeholder='Título sección'; titleIn.className='section-title';
+      titleIn.value=defaultTitle; titleIn.oninput=updateMenuJSONMenu;
+      const remSecBtn = document.createElement('button');
+      remSecBtn.type='button'; remSecBtn.textContent='Eliminar Sección';
+      remSecBtn.onclick=()=>{
         sectionDiv.remove();
         updateMenuJSONMenu();
-      });
-      
-      const titleContainer = document.createElement('div');
-      titleContainer.appendChild(sectionTitleInput);
-      titleContainer.appendChild(removeSectionBtn);
-      
-      const optionsContainer = document.createElement('div');
-      optionsContainer.className = 'options-container';
-      
-      const addOptionBtn = document.createElement('button');
-      addOptionBtn.type = 'button';
-      addOptionBtn.textContent = 'Agregar Opción';
-      addOptionBtn.addEventListener('click', () => {
-        addMenuOptionMenu(optionsContainer);
-      });
-      
-      sectionDiv.appendChild(titleContainer);
-      sectionDiv.appendChild(optionsContainer);
-      sectionDiv.appendChild(addOptionBtn);
+      };
+      const optsCt = document.createElement('div'); optsCt.className='options-container';
+      const addOptBtn = document.createElement('button');
+      addOptBtn.type='button'; addOptBtn.textContent='Agregar Opción';
+      addOptBtn.onclick=()=>addMenuOptionMenu(optsCt);
+      sectionDiv.append(titleIn, remSecBtn, optsCt, addOptBtn);
       container.appendChild(sectionDiv);
-      
-      // Si se pasan opciones por defecto, agrégalas
-      if (defaultOptions.length > 0) {
-        defaultOptions.forEach(opt => {
-          addMenuOptionMenu(optionsContainer, opt);
-        });
-      }
+      defaultOptions.forEach(o=>addMenuOptionMenu(optsCt,o));
       updateMenuJSONMenu();
     }
     
-    function addMenuOptionMenu(optionsContainer, defaultValue = "") {
-      const optionDiv = document.createElement('div');
-      optionDiv.style.display = 'flex';
-      optionDiv.style.marginBottom = '5px';
-      
-      const optionInput = document.createElement('input');
-      optionInput.type = 'text';
-      optionInput.placeholder = 'Nombre de la opción';
-      optionInput.className = 'option-input';
-      optionInput.value = defaultValue;
-      optionInput.addEventListener('input', updateMenuJSONMenu);
-      
-      const removeOptionBtn = document.createElement('button');
-      removeOptionBtn.type = 'button';
-      removeOptionBtn.textContent = 'Eliminar';
-      removeOptionBtn.addEventListener('click', () => {
-        optionDiv.remove();
-        updateMenuJSONMenu();
-      });
-      
-      optionDiv.appendChild(optionInput);
-      optionDiv.appendChild(removeOptionBtn);
-      optionsContainer.appendChild(optionDiv);
+    function addMenuOptionMenu(optsCt, val=''){
+      const div = document.createElement('div');
+      div.style.display='flex'; div.style.marginBottom='5px';
+      const inp = document.createElement('input');
+      inp.type='text'; inp.placeholder='Opción'; inp.className='option-input';
+      inp.value=val; inp.oninput=updateMenuJSONMenu;
+      const rem = document.createElement('button');
+      rem.type='button'; rem.textContent='Eliminar';
+      rem.onclick=()=>{ div.remove(); updateMenuJSONMenu(); };
+      div.append(inp, rem);
+      optsCt.appendChild(div);
     }
     
-    function updateMenuJSONMenu() {
-      const menuData = {};
-      const sections = document.querySelectorAll('#menuModalSectionsContainer .menu-section');
-      sections.forEach(section => {
-        const sectionTitle = section.querySelector('.section-title').value.trim();
-        if (sectionTitle === '') return;
-        const key = sectionTitle.replace(/\s+/g, '');
-        const optionsInputs = section.querySelectorAll('.option-input');
-        const options = [];
-        optionsInputs.forEach(input => {
-          const value = input.value.trim();
-          if (value !== '') options.push(value);
-        });
-        if (options.length > 0) menuData[key] = options;
+    function updateMenuJSONMenu(){
+      const out = {};
+      document.querySelectorAll('#menuModalSectionsContainer .menu-section').forEach(sec=>{
+        const title = sec.querySelector('.section-title').value.trim();
+        if(!title) return;
+        const key = title.replace(/\s+/g,'');
+        const opts = Array.from(sec.querySelectorAll('.option-input'))
+          .map(i=>i.value.trim())
+          .filter(v=>v);
+        if(opts.length) out[key]=opts;
       });
-      document.getElementById('menuOptionsMenu').value = JSON.stringify(menuData);
+      document.getElementById('menuOptionsMenu').value = JSON.stringify(out);
     }
     
-    document.getElementById('newMenuBtn').addEventListener('click', () => {
-      document.getElementById('menuModalTitle').textContent = 'Nuevo Menú';
-      document.getElementById('adminMenuId').value = '';
-      document.getElementById('adminMenuTitleField').value = '';
-      document.getElementById('adminMenuDescription').value = '';
-      document.getElementById('adminMenuPrice').value = '';
-      document.getElementById('adminMenuImage').value = '';
-      document.getElementById('menuModalSectionsContainer').innerHTML = '';
-      document.getElementById('menuOptionsMenu').value = '';
-      document.getElementById('menuModal').style.display = 'flex';
-    });
+    document.getElementById('newMenuBtn').onclick = ()=>{
+      ['adminMenuId','adminMenuTitleField','adminMenuDescription','adminMenuPrice','adminMenuImage'].forEach(id=>{
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('menuModalSectionsContainer').innerHTML='';
+      document.getElementById('menuModalTitle').textContent='Nuevo Menú';
+      document.getElementById('menuModal').style.display='flex';
+    };
+    document.getElementById('cancelMenuModalBtn').onclick = ()=>{
+      document.getElementById('menuModal').style.display='none';
+    };
+    document.getElementById('addSectionMenuBtn').onclick = ()=> addMenuSection();
     
-    document.getElementById('cancelMenuModalBtn').addEventListener('click', () => {
-      document.getElementById('menuModal').style.display = 'none';
-    });
-    
-    document.getElementById('addSectionMenuBtn').addEventListener('click', () => {
-      addMenuSection();
-    });
-    
-    document.getElementById('saveMenuBtn').addEventListener('click', async () => {
-      // Validar campos mínimos para menú (Título y Precio)
-      const titleField = document.getElementById('adminMenuTitleField');
-      const priceField = document.getElementById('adminMenuPrice');
-      if (!titleField.value.trim() || !priceField.value.trim()) {
-        alert('Complete los campos obligatorios (Título y Precio)');
+    document.getElementById('saveMenuBtn').onclick = async ()=>{
+      const titleF = document.getElementById('adminMenuTitleField');
+      const priceF = document.getElementById('adminMenuPrice');
+      if(!titleF.value||!priceF.value){
+        alert('Título y precio obligatorios');
         return;
       }
-      
       updateMenuJSONMenu();
-      const menuOptions = document.getElementById('menuOptionsMenu').value;
-      
-      const id = document.getElementById('adminMenuId').value;
-      const menuTitle = titleField.value.trim();
-      const description = document.getElementById('adminMenuDescription').value.trim();
-      const price = parseFloat(priceField.value);
-      
-      const fileInput = document.getElementById('adminMenuImage');
-      let imageUrl = "";
-      const isEdit = !!id;
-      if (fileInput.files[0]) {
-        try {
-          const formData = new FormData();
-          formData.append('image', fileInput.files[0]);
-          const response = await fetch('https://api.imgur.com/3/image/', {
-            method: 'POST',
-            headers: { Authorization: `Client-ID ${IMGUR_CLIENT_ID}` },
-            body: formData
-          });
-          const data = await response.json();
-          if (!data.success) throw new Error(data.data.error);
-          imageUrl = data.data.link;
-        } catch (error) {
-          alert('Error subiendo imagen: ' + error.message);
-          return;
-        }
+      // subir imagen…
+      let imageUrl = '';
+      const file = document.getElementById('adminMenuImage').files[0];
+      if(file){
+        const fd = new FormData(); fd.append('image',file);
+        const imgRes = await fetch('https://api.imgur.com/3/image/',{
+          method:'POST',
+          headers:{ Authorization:`Client-ID ${IMGUR_CLIENT_ID}` },
+          body:fd
+        });
+        const imgJ = await imgRes.json();
+        if(!imgJ.success){ alert('Error IMGUR'); return; }
+        imageUrl = imgJ.data.link;
       }
-      
+      const isEdit = !!document.getElementById('adminMenuId').value;
       const menuData = {
-        id: id || Date.now().toString(),
-        title: menuTitle,
-        description,
-        price,
+        id: document.getElementById('adminMenuId').value||Date.now().toString(),
+        name: titleF.value.trim(),
+        description: document.getElementById('adminMenuDescription').value.trim(),
+        price: parseFloat(priceF.value),
         image: imageUrl,
-        menuOptions
+        products: JSON.parse(document.getElementById('menuOptionsMenu').value)
       };
-      
+      const payload = Object.assign(
+        { action: isEdit ? 'updateMenu' : 'addMenu' },
+        menuData
+      );
       showLoader();
       try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: isEdit ? 'updateMenu' : 'addMenu',
-            menu: menuData
-          })
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error('Error en la respuesta');
-        document.getElementById('menuModal').style.display = 'none';
-      } catch (error) {
-        alert('Error guardando menú: ' + error.message);
+        document.getElementById('menuModal').style.display='none';
+      } catch(err){
+        alert('Error guardando menú: '+err);
       }
       hideLoader();
-    });
+    };
     
-    // Alternar panel de administración
-    document.getElementById('toggleAdmin').addEventListener('click', () => {
+    // ————————————————
+    // Toggle panel
+    // ————————————————
+    document.getElementById('toggleAdmin').onclick = ()=>{
       const panel = document.getElementById('adminPanel');
-      panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
-      if (panel.style.display === 'block') loadProducts();
-    });
+      panel.style.display = panel.style.display==='block'?'none':'block';
+      if(panel.style.display==='block') loadProducts();
+    };
   </script>
 </body>
 </html>
