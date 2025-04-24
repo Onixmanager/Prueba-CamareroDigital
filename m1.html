@@ -13,7 +13,7 @@
   <!-- Animate.css para animaciones -->
   <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
   <!-- Añádelo en <head>, justo antes de tu <script> principal -->
-<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   <style>
     :root {
       --primary-color: #D2B48C;
@@ -1155,40 +1155,37 @@
   
   <script>
   
-      /***** INICIO: CARGA DINÁMICA DESDE GOOGLE SHEETS *****/
-    // Declaro variables globales para productos y categorías
-    let products = [];
-    let categoryData = {};
-
-    // Usamos tu ID real de Google Sheets
-    const SHEET_ID = '16T4nUgdleXWzb2jC1_G-gukCUrTgDTXr4vKZmW_5AYw';
-    
-    // URL de la hoja utilizando la API de Google Sheets con formato JSON
-    const sheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-
+  const SHEET_URL = 'https://docs.google.com/spreadsheets/d/16T4nUgdleXWzb2jC1_G-gukCUrTgDTXr4vKZmW_5AYw/pub?output=csv';
+  let products = [];
 
   function fetchProductsFromSheet() {
-    Tabletop.init({
-      key: SHEET_ID,
-      callback: (data) => {
-        products = data.map(item => ({
-          id:           Number(item.id),
-          name:         item.name,
-          description:  item.description,
-          price:        parseFloat(item.price),
-          image:        item.image,
-          category:     item.category,
-          subcategory:  item.subcategory,
-          // si usas menú, coloca en la hoja JSON en la columna menuOptions
-          menuOptions:  item.menuOptions ? JSON.parse(item.menuOptions) : undefined
+    fetch(SHEET_URL)
+      .then(response => response.text())
+      .then(csvData => {
+        const parsedData = Papa.parse(csvData, {
+          header: true,
+          dynamicTyping: true
+        });
+        
+        // Corregido: Asignar a la variable global 'products'
+        products = parsedData.data.map(item => ({
+          id: Number(item.id),
+          name: item.name,
+          description: item.description,
+          price: parseFloat(item.price),
+          image: item.image,
+          category: item.category,
+          subcategory: item.subcategory,
+          menuOptions: item.menuOptions ? JSON.parse(item.menuOptions) : undefined
         }));
-        // Una vez tengamos products, renderizamos:
+        
         renderCategoryMenu();
         renderProducts();
-      },
-      simpleSheet: true
-    });
+      })
+      .catch(error => console.error('Error cargando datos:', error));
   }
+  
+  
 
   // Arrancamos la carga al cargar la página:
   document.addEventListener('DOMContentLoaded', fetchProductsFromSheet);
